@@ -7,26 +7,29 @@ let sortableCompleted = false;
 
 
 if (argv.length) {
-  let src_path = path.join(__dirname, argv[0]);
-  let dist_path = argv[1] ? path.join(__dirname, argv[1]) : path.join(__dirname, 'dist')
+  let source_path = path.join(__dirname, argv[0]);
+  let destination_path = argv[1] ? path.join(__dirname, argv[1]) : path.join(__dirname, 'dist')
   let copyObserver = new Observer(() => {
     sortableCompleted = true;
     if (argv[2]) {
-      rimraf(src_path, src_path);
+      rimraf(source_path, source_path);
     }
   })
   let directoryObserver = new Observer(() => {
-    fs.mkdir(dist_path, (err) => {
+    fs.mkdir(destination_path, (err) => {
+      if (err) {
+        return;
+      }
       if (!sortableCompleted) {
         copyObserver.start('Началось слежение за копируемыми файлами');
-        sortableFiles(src_path, dist_path);
+        sortableFiles(source_path, destination_path);
       }
     });
   })
   directoryObserver.start('Началось слежение за удаляемыми папками');
 
   // Удаляем итоговую папку dist рекурсивно, если она существует
-  function rimraf(src_path, dist_path) {
+  function rimraf(src_path, dist_path, func) {
     fs.access(dist_path, fs.constants.F_OK, (err) => {
       if(err){
         // Создаем итоговую папку dist
@@ -41,28 +44,41 @@ if (argv.length) {
           console.log('2', err);
           return;
         }
+        if (files.length == 0) {
+          directoryObserver.addObserver(dist_path);
+          fs.rmdir(dist_path, (err) => {
+            if(err) {
+              console.log('55', err);
+              return;
+            }
+            directoryObserver.removeObserver(dist_path);
+          });
+        }
         let fileObserver = new Observer(() => {
           directoryObserver.addObserver(dist_path);
           fs.rmdir(dist_path, (err) => {
             if(err) {
-              console.log('5', err);
+              console.log('555', err);
               return;
             }
             directoryObserver.removeObserver(dist_path);
+            if (dist_path != destination_path && dist_path != source_path) {
+              func(dist_path);
+            }
           });
         })
         fileObserver.start(`Началось слежение за удаляемыми файлами в папке ${dist_path}`);
         files.forEach(function(file) {
           let file_path = path.join(dist_path, file);
           fs.lstat(file_path, (err, stats) => {
+            fileObserver.addObserver(file_path);
             if (err) {
               console.log('3', err);
               return;
             }
             if (stats.isDirectory()) {
-              rimraf(src_path, file_path);
+              rimraf(src_path, file_path, fileObserver.removeObserver.bind(fileObserver));
             } else {
-              fileObserver.addObserver(file_path);
               fs.unlink(file_path, (err) => {
                 if (err) {
                   console.log('4', err);
@@ -127,7 +143,7 @@ if (argv.length) {
       })
     })
   }
-  rimraf(src_path, dist_path);
+  rimraf(source_path, destination_path);
 } else {
   console.info('Необходимо задать путь к исходной папке в первом параметре! Пример: ./files')
   console.info('Также можете задать путь к итоговой папке во втором параметре. По умолчанию: ./dist')

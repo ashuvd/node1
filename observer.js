@@ -7,10 +7,11 @@ module.exports = class {
 
   addObserver(observer) {
     this.observers.push(observer);
-    console.log(observer);
+    console.log('Добавление в массив слежения: ', observer);
   }
 
   removeObserver(observer) {
+    console.log('Удаление из массива слежения: ', observer);
     let index = this.observers.findIndex(item => item == observer);
     this.observers.splice(index, 1);
     this.isCompleted();
