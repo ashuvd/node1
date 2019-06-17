@@ -2,7 +2,7 @@ require('dotenv').config()
 const http = require('http')
 
 http.createServer(function(req, res) {
-  if (req.url == '/') {
+  if (req.url == '/' && req.method == 'GET') {
     let date = "";
     let interval = setInterval(function() {
       date = new Date();
@@ -16,6 +16,7 @@ http.createServer(function(req, res) {
   }
 }).listen(3000, function (err) {
   if (err) {
-    console.error(err);
+    return console.error(err);
   }
+  console.log('Сервер запущен на порту 3000');
 })
